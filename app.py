@@ -9,7 +9,7 @@ import csv
 app = FastAPI()
 
 # 1. ANH ĐIỀN LẠI API KEY GEMINI CỦA ANH VÀO ĐÂY NHÉ
-GEMINI_API_KEY = "AIzaSyCto0MS5p4ZDF_5QG5gE4DeNZ0ao9ZWoYkY" 
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") 
 genai.configure(api_key=GEMINI_API_KEY)
 
 # =====================================================================
