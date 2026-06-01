@@ -132,9 +132,6 @@ async def get_dashboard():
             
             // THẦY CHỈ CẦN DÁN CÁI MÃ KHÓA PUBLISHABLE KEY DÀI DÀI VÀO ĐÂY NHÉ:
             const SUPABASE_KEY = "sb_publishable_aP5Kx2_5ewoSaZ5dDlv5kQ_kHQV-TQe";
-            
-            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
             const loginSection = document.getElementById('loginSection');
             const appSection = document.getElementById('appSection');
             const userProfile = document.getElementById('userProfile');
