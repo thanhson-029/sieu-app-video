@@ -8,13 +8,12 @@ import csv
 
 app = FastAPI()
 
-# ANH DÁN LẠI API KEY GOOGLE CỦA ANH VÀO ĐÂY NHÉ
-GEMINI_API_KEY = "AIzaSyCto0MS5p4ZDF_5QG5gE4DeNZ0ao9ZWoYk" 
-
+# 1. THẦY ĐIỀN LẠI API KEY GEMINI CỦA THẦY VÀO ĐÂY NHÉ
+GEMINI_API_KEY = "AIzaSyCto0MS5p4ZDF_5QG5gE4DeNZ0ao9ZWoYkY" 
 genai.configure(api_key=GEMINI_API_KEY)
 
 # =====================================================================
-# 1. GIAO DIỆN WEB FRONTEND (SAAS DASHBOARD PROTOTYPE)
+# GIAO DIỆN WEB (ĐÃ CÓ SẴN LINK SUPABASE CỦA THẦY SƠN)
 # =====================================================================
 @app.get("/", response_class=HTMLResponse)
 async def get_dashboard():
@@ -27,6 +26,7 @@ async def get_dashboard():
         <title>Siêu App AI Video Shorts - SaaS Node</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     </head>
     <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
 
@@ -40,20 +40,39 @@ async def get_dashboard():
                         Sieu Video AI
                     </span>
                 </div>
-                <div class="flex items-center space-x-4">
+                
+                <div id="userProfile" class="hidden flex items-center space-x-4">
                     <div class="hidden sm:flex flex-col text-right">
-                        <span class="text-sm font-semibold text-slate-300">Thầy Sơn (Admin)</span>
+                        <span id="userEmail" class="text-sm font-semibold text-slate-300">Đang tải...</span>
                         <span class="text-xs text-emerald-400 font-medium"><i class="fa-solid fa-crown mr-1"></i>Gói SaaS Premium</span>
                     </div>
-                    <div class="bg-slate-800 px-3 py-1.5 rounded-full text-xs font-mono text-cyan-400 border border-slate-700">
-                        Credits: Vô hạn
-                    </div>
+                    <button id="btnLogout" class="bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold text-red-400 border border-slate-700 transition">
+                        Đăng Xuất
+                    </button>
                 </div>
             </div>
         </header>
 
-        <main class="max-w-4xl mx-auto px-4 py-10">
-            
+        <section id="loginSection" class="max-w-md mx-auto mt-20 bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-700">
+            <h2 class="text-2xl font-bold text-center mb-2 text-white">Đăng Nhập Hệ Thống</h2>
+            <p class="text-sm text-center text-slate-400 mb-6">Chỉ dành cho thành viên được cấp quyền</p>
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-400 mb-1">Email Tài Khoản</label>
+                    <input type="email" id="emailInput" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-400 mb-1">Mật Khẩu</label>
+                    <input type="password" id="passwordInput" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500" required>
+                </div>
+                <button type="submit" id="btnLogin" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg transition mt-4">
+                    Đăng Nhập
+                </button>
+                <p id="loginError" class="text-red-400 text-sm text-center hidden mt-2"></p>
+            </form>
+        </section>
+
+        <main id="appSection" class="hidden max-w-4xl mx-auto px-4 py-10">
             <div class="text-center mb-10">
                 <h1 class="text-3xl font-black tracking-tight mb-2 sm:text-4xl">
                     Tẩy Trắng Video Đối Thủ Thành <span class="text-indigo-400">Shorts Triệu View</span>
@@ -74,11 +93,9 @@ async def get_dashboard():
                             <div class="text-sm font-medium text-slate-200" id="fileStatus">
                                 Kéo thả video gốc vào đây hoặc <span class="text-indigo-400 underline">Chọn từ máy tính</span>
                             </div>
-                            <div class="text-xs text-slate-500">Hỗ trợ định dạng MP4, MOV, AVI... dung lượng tối ưu</div>
                         </div>
                     </div>
-
-                    <button type="submit" id="btnSubmit" class="w-full bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold py-3.5 px-4 rounded-xl transition shadow-lg shadow-indigo-600/20 flex items-center justify-center space-x-2 text-base">
+                    <button type="submit" id="btnSubmit" class="w-full bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold py-3.5 px-4 rounded-xl transition shadow-lg flex items-center justify-center space-x-2">
                         <i class="fa-solid fa-bolt"></i>
                         <span>Bắt Đầu Phân Tích & Remake Video</span>
                     </button>
@@ -86,107 +103,108 @@ async def get_dashboard():
             </section>
 
             <section id="loadingSection" class="hidden text-center py-12 bg-slate-800/20 rounded-2xl border border-slate-800/50 space-y-4">
-                <div class="inline-block animate-spin text-indigo-500 text-4xl">
-                    <i class="fa-solid fa-circle-notch"></i>
-                </div>
-                <div class="text-indigo-400 font-bold tracking-wider text-sm animate-pulse" id="loadingText">
-                    ĐANG TẢI VIDEO LÊN GOOGLE AI STUDIO...
-                </div>
-                <p class="text-xs text-slate-500 max-w-xs mx-auto">Bộ não Gemini 2.5 Flash đang nghe lời thoại và bóc tách cấu trúc hình ảnh.</p>
+                <div class="inline-block animate-spin text-indigo-500 text-4xl"><i class="fa-solid fa-circle-notch"></i></div>
+                <div class="text-indigo-400 font-bold tracking-wider text-sm animate-pulse" id="loadingText">ĐANG TẢI VIDEO LÊN GOOGLE AI STUDIO...</div>
             </section>
 
             <section id="resultSection" class="hidden space-y-6">
-                
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-slate-800/80 border border-slate-700 p-4 rounded-xl gap-4">
                     <div class="flex items-center space-x-2 text-emerald-400 font-bold text-sm sm:text-base">
                         <i class="fa-solid fa-circle-check text-lg"></i>
                         <span>XỬ LÝ HOÀN TẤT! ĐÃ TRÍCH XUẤT ĐỦ 5 CẢNH SẠCH</span>
                     </div>
-                    <a id="btnDownloadExcel" href="#" class="inline-flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-4 rounded-lg transition text-sm shadow-md shadow-emerald-900/20">
+                    <a id="btnDownloadExcel" href="#" class="inline-flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-4 rounded-lg transition text-sm">
                         <i class="fa-solid fa-file-excel text-base"></i>
                         <span>Tải Bảng Excel Thống Kê (.CSV)</span>
                     </a>
                 </div>
-
                 <div class="bg-slate-950 border border-slate-800 rounded-xl p-5 shadow-inner">
-                    <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-                        <span class="text-xs font-bold tracking-widest text-slate-400 uppercase"><i class="fa-solid fa-rectangle-list mr-1"></i> Bảng Đạo Diễn Chi Tiết</span>
-                        <span class="text-xs bg-slate-800 px-2 py-0.5 rounded text-indigo-400 font-medium">Bản xem trước</span>
-                    </div>
                     <pre id="directorBoardText" class="text-sm text-slate-300 font-mono whitespace-pre-wrap leading-relaxed max-h-[500px] overflow-y-auto pr-2"></pre>
                 </div>
             </section>
-
         </main>
 
         <script>
+            // ============================================================
+            // KHU VỰC CẮM CHÌA KHÓA BẢO MẬT (EM ĐÃ ĐIỀN SẴN LINK CHO THẦY)
+            // ============================================================
+            const SUPABASE_URL = "https://xvepiudhohbqwdvpkhhx.supabase.co";
+            
+            // THẦY CHỈ CẦN DÁN CÁI MÃ KHÓA PUBLISHABLE KEY DÀI DÀI VÀO ĐÂY NHÉ:
+            const SUPABASE_KEY = "sb_publishable_aP5Kx2_5ewoSaZ5dDlv5kQ_kHQV-TQe";
+            
+            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+            const loginSection = document.getElementById('loginSection');
+            const appSection = document.getElementById('appSection');
+            const userProfile = document.getElementById('userProfile');
+            const userEmail = document.getElementById('userEmail');
+            const loginError = document.getElementById('loginError');
+
+            supabase.auth.onAuthStateChange((event, session) => {
+                if (session) {
+                    loginSection.classList.add('hidden');
+                    appSection.classList.remove('hidden');
+                    userProfile.classList.remove('hidden');
+                    userEmail.innerText = session.user.email;
+                } else {
+                    loginSection.classList.remove('hidden');
+                    appSection.classList.add('hidden');
+                    userProfile.classList.add('hidden');
+                }
+            });
+
+            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('emailInput').value;
+                const password = document.getElementById('passwordInput').value;
+                document.getElementById('btnLogin').innerText = "Đang kiểm tra...";
+
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+                if (error) {
+                    loginError.innerText = "Sai email hoặc mật khẩu! Vui lòng liên hệ Admin.";
+                    loginError.classList.remove('hidden');
+                    document.getElementById('btnLogin').innerText = "Đăng Nhập";
+                }
+            });
+
+            document.getElementById('btnLogout').addEventListener('click', async () => {
+                await supabase.auth.signOut();
+            });
+
             const fileInput = document.getElementById('videoFile');
             const fileStatus = document.getElementById('fileStatus');
             const uploadForm = document.getElementById('uploadForm');
             const btnSubmit = document.getElementById('btnSubmit');
             const loadingSection = document.getElementById('loadingSection');
-            const loadingText = document.getElementById('loadingText');
-            const resultSection = document.getElementById('resultSection');
-            const directorBoardText = document.getElementById('directorBoardText');
-            const btnDownloadExcel = document.getElementById('btnDownloadExcel');
-
-            // Cập nhật tên file khi chọn xong
-            fileInput.addEventListener('change', (e) => {
-                if(fileInput.files.length > 0) {
-                    fileStatus.innerHTML = `Đã chọn: <span class="text-indigo-400 font-bold">${fileInput.files[0].name}</span>`;
-                }
+            
+            fileInput.addEventListener('change', () => {
+                if(fileInput.files.length > 0) fileStatus.innerHTML = `Đã chọn: <span class="text-indigo-400 font-bold">${fileInput.files[0].name}</span>`;
             });
 
-            // Xử lý gửi Form lên API bằng AJAX (Fetch)
             uploadForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                
-                // 1. Chuyển trạng thái giao diện sang Loading
                 uploadForm.classList.add('pointer-events-none', 'opacity-50');
                 loadingSection.classList.remove('hidden');
-                resultSection.classList.add('hidden');
                 btnSubmit.disabled = true;
 
-                // Tạo hiệu ứng đổi chữ loading cho chuyên nghiệp
-                const statusMsgs = [
-                    "ĐANG TẢI VIDEO LÊN GOOGLE AI STUDIO...",
-                    "GEMINI ĐANG QUAN SÁT TẠO HÌNH NHÂN VẬT GỐC...",
-                    "ĐANG CỐ ĐỊNH CHÂN DUNG NHÂN VẬT QUA 5 CẢNH PROMPT...",
-                    "ĐANG DỊCH THOẠI TIẾNG VIỆT VÀ CHỐNG TẠO CHỮ (NO TEXT)...",
-                    "ĐANG ĐÓNG GÓI DỮ LIỆU ĐỂ XUẤT RA EXCEL..."
-                ];
-                let msgIdx = 0;
-                const msgInterval = setInterval(() => {
-                    msgIdx = (msgIdx + 1) % statusMsgs.length;
-                    loadingText.innerText = statusMsgs[msgIdx];
-                }, 4000);
-
-                // 2. Chuẩn bị file để bắn lên API
                 const formData = new FormData();
                 formData.append("video", fileInput.files[0]);
 
                 try {
-                    const response = await fetch('/api/remake-video', {
-                        method: 'POST',
-                        body: formData
-                    });
+                    const response = await fetch('/api/remake-video', { method: 'POST', body: formData });
                     const data = await response.json();
-
-                    clearInterval(msgInterval);
-
                     if(response.ok) {
-                        // 3. Hiển thị kết quả lên màn hình Web
-                        directorBoardText.textContent = data.director_board;
-                        btnDownloadExcel.href = `/api/download/${data.excel_file}`;
-                        resultSection.classList.remove('hidden');
+                        document.getElementById('directorBoardText').textContent = data.director_board;
+                        document.getElementById('btnDownloadExcel').href = `/api/download/${data.excel_file}`;
+                        document.getElementById('resultSection').classList.remove('hidden');
                     } else {
-                        alert("Có lỗi xảy ra: " + (data.error || "Không rõ nguyên nhân"));
+                        alert("Lỗi: " + data.error);
                     }
                 } catch (error) {
-                    clearInterval(msgInterval);
-                    alert("Không thể kết nối đến Server Python backend!");
+                    alert("Mất kết nối máy chủ!");
                 } finally {
-                    // 4. Khôi phục lại nút bấm
                     uploadForm.classList.remove('pointer-events-none', 'opacity-50');
                     loadingSection.classList.add('hidden');
                     btnSubmit.disabled = false;
@@ -198,104 +216,50 @@ async def get_dashboard():
     """
     return HTMLResponse(content=html_content, status_code=200)
 
-
-# =====================================================================
-# 2. HỆ THỐNG XỬ LÝ BACKEND (LOGIC AI + XUẤT FILE BIỂU)
-# =====================================================================
 @app.post("/api/remake-video")
 async def remake_video(video: UploadFile = File(...)):
-    
     temp_file_path = f"temp_{video.filename}"
     with open(temp_file_path, "wb") as buffer:
         shutil.copyfileobj(video.file, buffer)
-        
     try:
-        print("Đang tải video lên Google AI Studio...")
         uploaded_video = genai.upload_file(path=temp_file_path)
-        
         while uploaded_video.state.name == "PROCESSING":
-            print(".", end="", flush=True)
             time.sleep(2)
             uploaded_video = genai.get_file(uploaded_video.name)
             
         if uploaded_video.state.name == "FAILED":
             return {"error": "Lỗi xử lý video từ phía Google."}
             
-        print("\nĐang phân tích, viết kịch bản và tạo dữ liệu SaaS...")
         model = genai.GenerativeModel(model_name="gemini-2.5-flash")
-        
         system_prompt = """
-        Bạn là một chuyên gia kịch bản YouTube Shorts và bậc thầy tạo Prompt cho AI Google Veo 3 / Kling AI.
-        Hãy xem/nghe đoạn video tôi cung cấp và thực hiện các yêu cầu NGHIÊM NGẶT sau:
-        
-        PHẦN 1: KỊCH BẢN MỚI (YÊU CẦU ĐÚNG 5 CẢNH)
-        - Viết lại nội dung từ video gốc thành 1 kịch bản Shorts hoàn toàn mới, hấp dẫn, có Hook giật gân.
-        - BẮT BUỘC chia kịch bản thành CHÍNH XÁC 5 CẢNH (Scene 1 đến Scene 5).
-        - Ghi chú yêu cầu Voice: "Giọng người miền Bắc Việt Nam, trong trẻo, dễ nghe".
-        
-        PHẦN 2: VEO 3 PROMPTS (TIẾNG ANH + CỐ ĐỊNH NHÂN VẬT + KHÔNG TEXT)
-        - CỐ ĐỊNH NHÂN VẬT: Tạo 1 cụm từ tiếng Anh mô tả ngoại hình nhân vật chi tiết và đặt ở đầu MỖI prompt của 5 cảnh.
-        - KHÔNG CHỨA CHỮ VIẾT: Tuyệt đối KHÔNG yêu cầu AI tạo ra chữ, text overlay, hay tiêu đề xuất hiện trên khung hình.
-        - Cấu trúc 1 câu Prompt BẮT BUỘC phải theo định dạng sau:
-          [Mô tả nhân vật cố định bằng Tiếng Anh] + [Hành động/Bối cảnh Tiếng Anh] + "cinematic lighting, ultra-detailed, photorealistic, 9:16 vertical aspect ratio, shot on 35mm lens, absolutely NO TEXT, no watermark, no typography". **Lời thoại:** "[Chèn chính xác câu thoại tiếng Việt của cảnh đó vào đây]"
-        
-        PHẦN 3: XUẤT DỮ LIỆU BẢNG EXCEL (BẮT BUỘC ĐẶT Ở CUỐI CÙNG)
-        Hãy tạo một danh sách thô gồm đúng 5 dòng tương ứng với 5 cảnh để đưa vào Excel. Phân tách Tên Cảnh, Prompt tiếng Anh, và Lời thoại bằng ký tự | (dấu gạch dọc). 
-        TUYỆT ĐỐI KHÔNG dùng bảng Markdown, chỉ viết chữ thô như ví dụ dưới đây:
-        Cảnh 1 | A 35-year-old Asian man... absolutely NO TEXT. | Này, bà con ơi!
-        Cảnh 2 | A 35-year-old Asian man... absolutely NO TEXT. | Cứ tưởng do thiếu sắt...
+        Bạn là chuyên gia kịch bản YouTube Shorts.
+        PHẦN 1: KỊCH BẢN MỚI (5 CẢNH)
+        PHẦN 2: VEO 3 PROMPTS (CỐ ĐỊNH NHÂN VẬT + KHÔNG TEXT)
+        [Mô tả nhân vật cố định] + [Hành động] + "cinematic lighting, ultra-detailed, 9:16 vertical, NO TEXT". **Lời thoại:** "[Chèn thoại Tiếng Việt]"
+        PHẦN 3: XUẤT DỮ LIỆU BẢNG EXCEL
+        Cảnh 1 | A 35-year-old Asian man... NO TEXT. | Này, bà con ơi!
         """
-        
         response = model.generate_content([uploaded_video, system_prompt])
         final_result = response.text
         
-        # In kết quả ra Terminal để dự phòng
-        print("\n" + "="*70)
-        print("DỮ LIỆU ĐÃ XỬ LÝ HOÀN TẤT:")
-        print("="*70)
-        print(final_result)
-        print("="*70 + "\n")
-        
-        # Tạo file CSV/Excel Excel
         excel_filename = f"Kich_Ban_{int(time.time())}.csv"
-        
         if "PHẦN 3:" in final_result:
             csv_data = final_result.split("PHẦN 3:")[1].strip()
             lines = csv_data.split('\n')
-            
             with open(excel_filename, 'w', encoding='utf-8-sig', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow(['Tên Cảnh', 'Prompt Video (Copy dán vào Veo/Kling)', 'Lời Thoại (Copy dán vào Capcut lồng tiếng)'])
-                
+                writer.writerow(['Tên Cảnh', 'Prompt Video', 'Lời Thoại'])
                 for line in lines:
                     if '|' in line:
-                        row = [item.strip() for item in line.split('|')]
-                        writer.writerow(row)
-            
-            print(f"✅ ĐÃ XUẤT THÀNH CÔNG FILE EXCEL: {excel_filename}")
-
-        return {
-            "message": "Phân tích kịch bản thành công!",
-            "director_board": final_result,
-            "excel_file": excel_filename
-        }
-
+                        writer.writerow([item.strip() for item in line.split('|')])
+        return {"message": "Thành công!", "director_board": final_result, "excel_file": excel_filename}
     finally:
-        if os.path.exists(temp_file_path):
-            os.remove(temp_file_path)
-        try:
-            genai.configure(api_key=GEMINI_API_KEY)
-            genai.delete_file(uploaded_video.name)
-        except:
-            pass
+        if os.path.exists(temp_file_path): os.remove(temp_file_path)
+        try: genai.delete_file(uploaded_video.name)
+        except: pass
 
-# =====================================================================
-# 3. ROUTE TẢI FILE EXCEL TRỰC TIẾP TỪ GIAO DIỆN WEB
-# =====================================================================
 @app.get("/api/download/{filename}")
 async def download_file(filename: str):
     if os.path.exists(filename):
         return FileResponse(filename, media_type='text/csv', filename=filename)
-    raise HTTPException(status_code=404, detail="File không tồn tại hoặc đã bị xóa.")
-sb_publishable_aP5Kx2_5ewoSaZ5dDlv5kQ_kHQV-TQe
-https://xvepiudhohbqwdvpkhhx.supabase.co/rest/v1/
+    raise HTTPException(status_code=404, detail="File không tồn tại.")
