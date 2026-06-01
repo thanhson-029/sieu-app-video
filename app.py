@@ -8,12 +8,12 @@ import csv
 
 app = FastAPI()
 
-# 1. THẦY ĐIỀN LẠI API KEY GEMINI CỦA THẦY VÀO ĐÂY NHÉ
+# 1. ANH ĐIỀN LẠI API KEY GEMINI CỦA ANH VÀO ĐÂY NHÉ
 GEMINI_API_KEY = "AIzaSyCto0MS5p4ZDF_5QG5gE4DeNZ0ao9ZWoYkY" 
 genai.configure(api_key=GEMINI_API_KEY)
 
 # =====================================================================
-# GIAO DIỆN WEB (ĐÃ CÓ SẴN LINK SUPABASE CỦA THẦY SƠN)
+# GIAO DIỆN WEB CHUẨN (ĐÃ KHỬ TRÙNG LẶP BIẾN SUPABASE)
 # =====================================================================
 @app.get("/", response_class=HTMLResponse)
 async def get_dashboard():
@@ -23,7 +23,7 @@ async def get_dashboard():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Siêu App AI Video Shorts - SaaS Node</title>
+        <title>Siêu App AI Video Shorts</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -104,7 +104,7 @@ async def get_dashboard():
 
             <section id="loadingSection" class="hidden text-center py-12 bg-slate-800/20 rounded-2xl border border-slate-800/50 space-y-4">
                 <div class="inline-block animate-spin text-indigo-500 text-4xl"><i class="fa-solid fa-circle-notch"></i></div>
-                <div class="text-indigo-400 font-bold tracking-wider text-sm animate-pulse" id="loadingText">ĐANG TẢI VIDEO LÊN GOOGLE AI STUDIO...</div>
+                <div class="text-indigo-400 font-bold tracking-wider text-sm animate-pulse">ĐANG TẢI VIDEO LÊN GOOGLE AI STUDIO...</div>
             </section>
 
             <section id="resultSection" class="hidden space-y-6">
@@ -125,20 +125,22 @@ async def get_dashboard():
         </main>
 
         <script>
-            // ============================================================
-            // KHU VỰC CẮM CHÌA KHÓA BẢO MẬT (EM ĐÃ ĐIỀN SẴN LINK CHO THẦY)
-            // ============================================================
-            const SUPABASE_URL = "https://xvepiudhohbqwdvpkhhx.supabase.co";
+            // ĐỊA CHỈ KÉT SẮT (EM ĐÃ ĐIỀN SẴN LINK CHO ANH)
+            const S_URL = "https://xvepiudhohbqwdvpkhhx.supabase.co";
             
-            // THẦY CHỈ CẦN DÁN CÁI MÃ KHÓA PUBLISHABLE KEY DÀI DÀI VÀO ĐÂY NHÉ:
-            const SUPABASE_KEY = "sb_publishable_aP5Kx2_5ewoSaZ5dDlv5kQ_kHQV-TQe";
+            // 2. ANH CHỈ CẦN DÁN CÁI MÃ KHÓA PUBLISHABLE KEY VÀO ĐÂY NHÉ:
+            const S_KEY = "sb_publishable_aP5Kx2_5ewoSaZ5dDlv5kQ_kHQV-TQe";
+            
+            // Khởi tạo hệ thống với tên biến độc nhất, không lo bị trùng lặp
+            const mienNamDocNhatSupabase = window.supabase.createClient(S_URL, S_KEY);
+
             const loginSection = document.getElementById('loginSection');
             const appSection = document.getElementById('appSection');
             const userProfile = document.getElementById('userProfile');
             const userEmail = document.getElementById('userEmail');
             const loginError = document.getElementById('loginError');
 
-            supabase.auth.onAuthStateChange((event, session) => {
+            mienNamDocNhatSupabase.auth.onAuthStateChange((event, session) => {
                 if (session) {
                     loginSection.classList.add('hidden');
                     appSection.classList.remove('hidden');
@@ -157,7 +159,7 @@ async def get_dashboard():
                 const password = document.getElementById('passwordInput').value;
                 document.getElementById('btnLogin').innerText = "Đang kiểm tra...";
 
-                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                const { data, error } = await mienNamDocNhatSupabase.auth.signInWithPassword({ email, password });
 
                 if (error) {
                     loginError.innerText = "Sai email hoặc mật khẩu! Vui lòng liên hệ Admin.";
@@ -167,7 +169,7 @@ async def get_dashboard():
             });
 
             document.getElementById('btnLogout').addEventListener('click', async () => {
-                await supabase.auth.signOut();
+                await mienNamDocNhatSupabase.auth.signOut();
             });
 
             const fileInput = document.getElementById('videoFile');
